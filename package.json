@@ -20,12 +20,15 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@genkit-ai/dev-local-vectorstore": "^1.21.0",
     "@genkit-ai/google-genai": "^1.21.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/client": "^6.17.1",
     "genkit": "^1.21.0",
+    "llm-chunk": "^0.0.1",
+    "pdf-parse": "^2.4.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "zod": "^3.25.76"
