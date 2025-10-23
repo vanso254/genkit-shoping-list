@@ -63,7 +63,7 @@ export class ResourceService {
                 "A list of all ingredient names found in the recipe.",
             ),
         }, async (input) => {
-            // You can use the AI instance here to analyze text, extract recipes, etc.
+            //  use the AI instance here to analyze text, extract recipes, etc.
             const result = await this.genkitService.ai.generate({
                 model: "gemini-1.5-pro",
                 prompt: `List all ingredient names found in the recipe:\n${input}`,
