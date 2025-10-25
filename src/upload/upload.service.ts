@@ -30,6 +30,7 @@ export class UploadService {
         message: "PDF uploaded and processed successfully!",
         filename: file.filename,
         size: file.size,
+        path: filePath,
         url: `/uploads/${uniqueName}`,
       };
     } catch (error) {

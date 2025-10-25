@@ -23,6 +23,7 @@
     "@genkit-ai/dev-local-vectorstore": "^1.21.0",
     "@genkit-ai/google-genai": "^1.21.0",
     "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@prisma/client": "^6.17.1",

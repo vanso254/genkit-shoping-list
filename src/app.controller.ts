@@ -20,6 +20,8 @@ export class AppController {
   constructor(
     private readonly appService: AppService,
     private readonly uploadService: UploadService,
+    private readonly toolService: ToolService,
+    private readonly resourceService: ResourceService,
   ) {}
 
   @Get()
@@ -34,16 +36,40 @@ export class AppController {
     @UploadedFile(
       new ParseFilePipeBuilder()
         .addFileTypeValidator({
-          fileType: "application/pdf", // ✅ Only allow PDF
+          fileType: "application/pdf",
         })
         .addMaxSizeValidator({
-          maxSize: 14 * 1024 * 1024, // ✅ Max file size = 14MB
+          maxSize: 14 * 1024 * 1024,
         })
         .build({
           errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
         }),
     ) file: Express.Multer.File,
   ) {
-    return this.uploadService.handlePdfUpload(file);
+    console.log("Uploading PDF...");
+    // Step 1️⃣ - Save the file to disk
+    const uploadResult = await this.uploadService.handlePdfUpload(file);
+    console.log("File uploaded:", uploadResult);
+
+    // Step 2️⃣ - Process the file (extract and embed)
+    const resourceResult = await this.resourceService.processResource(
+      uploadResult.path,
+    );
+
+    console.log("Resource processed:", resourceResult);
+const recipesOutput = resourceResult.recipes as unknown as string; //This is madness
+const recipeResult = recipesOutput
+  .split("\n")
+  .filter(Boolean)
+  .map((name) => ({ name }));
+
+
+    // Step 4️⃣ - Return the full report
+    return {
+      message: "PDF processed and indexed successfully",
+      upload: uploadResult,
+      resource: resourceResult,
+      recipe: recipeResult,
+    };
   }
 }

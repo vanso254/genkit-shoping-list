@@ -1,23 +1,21 @@
-import { Injectable } from "@nestjs/common";
+import { ConflictException, Injectable } from "@nestjs/common";
 import { GenkitService } from "../genkit.service";
 import * as fs from "fs/promises";
 import { PDFParse, TextResult } from "pdf-parse";
 import { chunk } from "llm-chunk";
-import { ConflictException } from "@nestjs/common";
-import { z } from "genkit";
+import { createIndexRecipeFlow } from "./indexRecipe.flow";
 
-// The aim here is to get the data from a file i.e pdf then index it using genkit embeddings
 @Injectable()
 export class ResourceService {
     constructor(private readonly genkitService: GenkitService) {}
 
     private async processPdf(filePath: string) {
-        // 1️Read the PDF file
         const fileBuffer = await fs.readFile(filePath);
 
-        // 2️Extract text from it
+        console.log("Extracting text from PDF...");
         const pdfData = new PDFParse({ data: fileBuffer });
         let textResult: TextResult | undefined;
+
         try {
             textResult = await pdfData.getText();
         } catch (error) {
@@ -29,53 +27,47 @@ export class ResourceService {
         } finally {
             await pdfData.destroy();
         }
-        // 3) Extract plain string from the TextResult
+
         const text = textResult?.text ?? "";
+        console.log("Chunking the data...");
 
-        // chunk the file
-        const chunkingConfig = {
-            maxChunkSize: 800, // characters per chunk
-            minChunkSize: 300,
-            overlap: 100, // preserve context
-        };
+        const chunks = chunk(text, {
+            maxLength: 800,
+            minLength: 300,
+            overlap: 100,
+        });
 
-        const chunks = chunk(text, chunkingConfig);
+        console.log(`Total chunks created: ${chunks.length}`);
+        console.log("Embedding each chunk...");
 
-        // embedd each chunk
         const embeddings = await Promise.all(
-            chunks.map(async (chunkText) => {
-                return this.genkitService.ai.embed({
-                    embedder: "gemini-embedding-001",
+            chunks.map(async (chunkText) =>
+                this.genkitService.ai.embed({
+                    embedder: "text-embedding-004",
                     content: chunkText,
-                });
-            }),
+                    options: {
+                        taskType: "RETRIEVAL_DOCUMENT",
+                    },
+                })
+            ),
         );
-        // 4) Return the extracted text, the chunks, and the embeddings
+
+        console.log(`Total embeddings created: ${embeddings.length}`);
+
         return { text, chunks, embeddings };
     }
 
     async processResource(filePath: string) {
+        console.log("Processing resource at:", filePath);
         const pdfData = await this.processPdf(filePath);
-        const indexRecipe = this.genkitService.ai.defineFlow({
-            name: "Recipe index",
-            inputSchema: z.string(),
-            outputSchema: z.string().describe(
-                "A list of all ingredient names found in the recipe.",
-            ),
-        }, async (input) => {
-            //  use the AI instance here to analyze text, extract recipes, etc.
-            const result = await this.genkitService.ai.generate({
-                model: "gemini-1.5-pro",
-                prompt: `List all ingredient names found in the recipe:\n${input}`,
-            });
-            const textOutput = result.output?.content?.[0]?.text ??
-                "No output text received from model.";
-            return textOutput;
-        });
-        const recipes = await indexRecipe.run(pdfData.text);
+        const indexRecipeFlow = createIndexRecipeFlow(this.genkitService.ai);
+
+        // ✅ FIXED: use static flow (discoverable)
+        console.log("Indexing recipes from PDF text...");
+        const recipesText = await indexRecipeFlow.run(pdfData.text);
 
         return {
-            recipes,
+            recipes: recipesText,
             totalChunks: pdfData.chunks.length,
             totalEmbeddings: pdfData.embeddings.length,
         };

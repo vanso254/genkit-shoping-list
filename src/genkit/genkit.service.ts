@@ -1,22 +1,17 @@
-import { Injectable,OnModuleInit } from "@nestjs/common";
-import { genkit, z } from "genkit";
-import { googleAI } from "@genkit-ai/google-genai";
-import devLocalVectorstore from "@genkit-ai/dev-local-vectorstore";
+import { Injectable, Inject } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { genkit } from "genkit";
+import { GENKIT_AI_TOKEN } from "./genkit.module";
 
 @Injectable()
-export class GenkitService implements OnModuleInit {
-    public ai: Awaited<ReturnType<typeof genkit>>;
-    async onModuleInit() {
-        this.ai = genkit({
-            plugins: [
-                googleAI(),
-                devLocalVectorstore([
-                    {
-                        indexName: "my-vector-store",
-                        embedder: googleAI.embedder("gemini-embedding-001"),
-                    },
-                ]),
-            ],
-        });
-    }
+export class GenkitService {
+  public ai: Awaited<ReturnType<typeof genkit>>;
+
+  constructor(
+    @Inject(GENKIT_AI_TOKEN)
+    aiInstance: Awaited<ReturnType<typeof genkit>>,
+    private readonly configService: ConfigService
+  ) {
+    this.ai = aiInstance;
+  }
 }
